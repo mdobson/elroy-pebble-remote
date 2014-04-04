@@ -1,69 +1,101 @@
 #include <pebble.h>
-#include <inttypes.h>
 
 enum {
-  AKEY_TEXT
+  AKEY_INT
 };
 
 static Window *window;
-static TextLayer *text_layer;
+static TextLayer *select_layer;
+static TextLayer *up_button_layer;
+static TextLayer *down_button_layer;
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
-  Tuplet value = TupletInteger(1, 42);
+  Tuplet value = TupletInteger(1, 1);
   dict_write_tuplet(iter, &value);
   app_message_outbox_send();
-  text_layer_set_text(text_layer, "Select button tapped.");
+  text_layer_set_text(select_layer, "Select button tapped.");
+  text_layer_set_text(up_button_layer, "");
+  text_layer_set_text(down_button_layer, "");
+
 }
 
 void out_sent_handler(DictionaryIterator *iter, void *context) {
-  text_layer_set_text(text_layer, "You won!");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Message sent out successfully");
 }
 
 void out_failed_handler(DictionaryIterator *iter, AppMessageResult reason, void *context) {
-  text_layer_set_text(text_layer, "You lost!");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Error sending message");
 }
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
-  Tuple *text_tuple = dict_find(iter, AKEY_TEXT);
-  text_layer_set_text(text_layer, "got msg");
+  Tuple *text_tuple = dict_find(iter, AKEY_INT);
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Received a message");
   if(text_tuple) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", (int)text_tuple->value->data);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "%d", text_tuple->value->int8);
   }
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
-  text_layer_set_text(text_layer, "Dropped it!");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Dropped message");
 }
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  text_layer_set_text(text_layer, "Up");
+  DictionaryIterator *iter;
+  app_message_outbox_begin(&iter);
+  Tuplet value = TupletInteger(1, 2);
+  dict_write_tuplet(iter, &value);
+  app_message_outbox_send();
+  text_layer_set_text(select_layer, "");
+  text_layer_set_text(up_button_layer, "Up button tapped.");
+  text_layer_set_text(down_button_layer, "");
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  text_layer_set_text(text_layer, "Down");
+  DictionaryIterator *iter;
+  app_message_outbox_begin(&iter);
+  Tuplet value = TupletInteger(1, 3);
+  dict_write_tuplet(iter, &value);
+  app_message_outbox_send();
+  text_layer_set_text(select_layer, "");
+  text_layer_set_text(up_button_layer, "");
+  text_layer_set_text(down_button_layer, "Down button tapped.");
 }
 
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
-  //window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
-  //window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
 
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  text_layer = text_layer_create((GRect) { .origin = { 0, 72 }, .size = { bounds.size.w, 20 } });
-  text_layer_set_text(text_layer, "Hello World!");
-  text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(text_layer));
+  select_layer = text_layer_create((GRect) { .origin = { 0, 57 }, .size = { bounds.size.w, 20 } });
+  up_button_layer = text_layer_create((GRect) { .origin = { 0, 12}, .size = { bounds.size.w, 20 } });
+  down_button_layer = text_layer_create((GRect) { .origin = { 0, 117}, .size = { bounds.size.w, 20 } });
+  
+
+  text_layer_set_text(up_button_layer, "Welcome");
+  text_layer_set_text_alignment(up_button_layer, GTextAlignmentCenter);
+  
+  text_layer_set_text(select_layer, "to");
+  text_layer_set_text_alignment(select_layer, GTextAlignmentCenter);
+
+  text_layer_set_text(down_button_layer, "Elroy!");
+  text_layer_set_text_alignment(down_button_layer, GTextAlignmentCenter);
+
+  layer_add_child(window_layer, text_layer_get_layer(select_layer));
+  layer_add_child(window_layer, text_layer_get_layer(up_button_layer));
+  layer_add_child(window_layer, text_layer_get_layer(down_button_layer));
 }
 
 static void window_unload(Window *window) {
-  text_layer_destroy(text_layer);
+  text_layer_destroy(select_layer);
+  text_layer_destroy(up_button_layer);
+  text_layer_destroy(down_button_layer);
 }
 
 static void init(void) {
